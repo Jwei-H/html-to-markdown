@@ -1,47 +1,50 @@
 # HTML to Markdown Converter
 
-一个轻量级、可扩展的 Java 工具库，用于将 HTML 转换为 Markdown 格式。
+[![](https://jitpack.io/v/com.jingwei/html-to-markdown.svg)](https://jitpack.io/#com.jingwei/html-to-markdown)
 
-## 特性
+A lightweight, extensible, and robust Java library for converting HTML content into Markdown format. Built on top of [Jsoup](https://jsoup.org/), it offers a clean API with powerful customization options.
 
-- ✅ **简洁高效** - 仅依赖 Jsoup，代码简洁易懂
-- ✅ **可扩展** - 支持自定义标签转换规则
-- ✅ **健壮性** - 处理嵌套结构、异常情况和边界条件
-- ✅ **完整测试** - 39 个单元测试和集成测试，覆盖所有支持的语法
+## Features
 
-## 支持的 Markdown 语法
+- **Robust Conversion**: Handles standard HTML elements including tables, lists (nested), images, links, and text formatting.
+- **Code Block Protection**: Smartly handles fenced code blocks (```) and indented code blocks during conversion to prevent corruption.
+- **Clean Output**: Automatically cleans up excessive newlines, fixes list spacing, and normalizes headings and emphasis.
+- **Extensible**: Easily add custom handlers for specific HTML tags.
+- **Configurable**: Choose to preserve specific HTML tags or remove them entirely from the output.
+- **Java 17+**: Built for modern Java applications.
 
-### 块级元素
-- 标题 (h1-h6)
-- 段落 (p)
-- 列表 (ul, ol, li) - 支持嵌套
-- 引用块 (blockquote)
-- 代码块 (pre, code) - 支持语言标记
-- 表格 (table, thead, tbody, tr, th, td)
-- 分隔线 (hr)
+## Installation
 
-### 行内元素
-- 粗体 (strong, b)
-- 斜体 (em, i)
-- 删除线 (del, s)
--行内代码 (code)
-- 链接 (a) - 支持标题属性
-- 图片 (img) - 支持 alt 和 title
-- 换行 (br)
+This project is hosted on [JitPack](https://jitpack.io).
 
-## 快速开始
+### Maven
 
-### Maven 依赖
+1. Add the JitPack repository to your build file:
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+2. Add the dependency:
 
 ```xml
 <dependency>
-    <groupId>com.jingwei</groupId>
+    <groupId>com.github.jingwei</groupId>
     <artifactId>html-to-markdown</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### 基本使用
+## Usage
+
+### Basic Usage
+
+The simplest way to use the converter is with the default configuration:
 
 ```java
 import com.github.htmltomd.HtmlToMarkdownConverter;
@@ -50,155 +53,117 @@ public class Example {
     public static void main(String[] args) {
         HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter();
         
-        String html = "<h1>Hello World</h1><p>This is a <strong>test</strong>.</p>";
+        String html = "<h1>Hello World</h1><p>This is a <strong>bold</strong> statement.</p>";
         String markdown = converter.convert(html);
         
         System.out.println(markdown);
-        // 输出:
-        // # Hello World
-        // 
-        // This is a **test**.
     }
 }
 ```
 
-### 自定义配置
+**Output:**
+```markdown
+# Hello World
+
+This is a **bold** statement.
+```
+
+### Configuration (Preserve/Remove Tags)
+
+You can customize the conversion process using `ConverterConfig`:
 
 ```java
-import com.github.htmltomd.ConverterConfig;
 import com.github.htmltomd.HtmlToMarkdownConverter;
+import com.github.htmltomd.ConverterConfig;
 
-public class CustomExample {
+public class ConfigExample {
     public static void main(String[] args) {
-        HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter();
-        
-        // 创建自定义配置
         ConverterConfig config = ConverterConfig.builder()
-            .preserveTag("sup")      // 保留 <sup> 标签
-            .preserveTag("sub")      // 保留 <sub> 标签
-            .removeTag("script")     // 完全移除 <script> 标签
-            .removeTag("style")      // 完全移除 <style> 标签
+            .preserveTag("sup")      // Keep <sup> tags as HTML
+            .preserveTag("sub")      // Keep <sub> tags as HTML
+            .removeTag("script")     // Completely remove <script> tags and their content
+            .removeTag("style")      // Completely remove <style> tags and their content
             .build();
+
+        HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter(config);
         
-        String html = "<p>E=mc<sup>2</sup></p><script>alert('test');</script>";
-        String markdown = converter.convert(html, config);
-        
-        System.out.println(markdown);
-        // 输出: E=mc<sup>2</sup>
-        // (script 标签被移除)
+        String html = "E = mc<sup>2</sup> <script>alert('bad')</script>";
+        System.out.println(converter.convert(html));
     }
 }
 ```
 
-### 自定义标签处理器
+**Output:**
+```markdown
+E = mc<sup>2</sup>
+```
+
+### Custom Element Handlers
+
+You can define your own transformation logic for specific tags by implementing `ElementHandler`:
 
 ```java
-import com.github.htmltomd.ConverterConfig;
 import com.github.htmltomd.HtmlToMarkdownConverter;
+import com.github.htmltomd.ConverterConfig;
 import com.github.htmltomd.handler.ElementHandler;
 import com.github.htmltomd.handler.HandlerContext;
 import org.jsoup.nodes.Element;
 
 public class CustomHandlerExample {
     public static void main(String[] args) {
-        // 创建自定义处理器
-        ElementHandler customHandler = new ElementHandler() {
+        ElementHandler markHandler = new ElementHandler() {
             @Override
             public boolean canHandle(Element element) {
                 return "mark".equals(element.tagName());
             }
-            
+
             @Override
             public String handle(Element element, HandlerContext context) {
-                // 将 <mark> 转换为 ==text==
-                String text = context.processChildren(element);
-                return "==" + text + "==";
+                // Determine how to handle children
+                String content = context.processChildren(element);
+                return "==" + content + "=="; // Custom markdown syntax for highlighting
             }
         };
-        
+
         ConverterConfig config = ConverterConfig.builder()
-            .addCustomHandler("mark", customHandler)
+            .addCustomHandler("mark", markHandler)
             .build();
-        
-        HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter();
-        String html = "<p>This is <mark>highlighted</mark> text.</p>";
-        String markdown = converter.convert(html, config);
-        
-        System.out.println(markdown);
-        // 输出: This is ==highlighted== text.
+
+        HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter(config);
+        System.out.println(converter.convert("Text with <mark>highlight</mark>"));
     }
 }
 ```
 
-## 项目结构
+## Supported Elements
 
-```
-src/main/java/com/github/htmltomd/
-├── HtmlToMarkdownConverter.java    # 主转换器
-├── ConverterConfig.java             # 配置类
-├── handler/
-│   ├── ElementHandler.java          # 处理器接口
-│   ├── HandlerContext.java          # 转换上下文
-│   └── impl/                        # 内置处理器实现
-│       ├── HeadingHandler.java
-│       ├── ParagraphHandler.java
-│       ├── LinkHandler.java
-│       ├── ImageHandler.java
-│       ├── EmphasisHandler.java
-│       ├── CodeHandler.java
-│       ├── ListHandler.java
-│       ├── BlockquoteHandler.java
-│       ├── TableHandler.java
-│       ├── HorizontalRuleHandler.java
-│       └── LineBreakHandler.java
-└── util/
-    └── MarkdownUtils.java           # 工具类
-```
+The default converter supports standard Markdown syntax mappings:
 
-## 构建和测试
+| HTML Element | Markdown Equivalent |
+|--------------|---------------------|
+| `<h1>`-`<h6>` | `#` - `######` |
+| `<p>` | Paragraph (double newline) |
+| `<br>` | Line break |
+| `<strong>`, `<b>` | `**Bold**` |
+| `<em>`, `<i>` | `*Italic*` |
+| `<ul>`, `<ol>`, `<li>` | Lists (Ordered & Unordered), Supports nesting |
+| `<a>` | `[Link Title](URL)` |
+| `<img>` | `![Alt Text](URL "Title")` |
+| `<blockquote>` | `> Quote` |
+| `<pre>`, `<code>` | Code blocks and inline code |
+| `<table>`, `<tr>`, `<td>`, etc. | Markdown Tables |
+| `<hr>` | `---` |
+
+## Building from Source
+
+To build the project locally, you need JDK 17+ and Maven.
 
 ```bash
-# 编译
-mvn compile
-
-# 运行测试
-mvn test
-
-# 打包
-mvn package
+git clone https://github.com/yourusername/html-to-markdown.git
+cd html-to-markdown
+mvn clean install
 ```
 
-## 扩展点
+## License
 
-### 1. 自定义标签处理器
-
-实现 `ElementHandler` 接口创建自定义处理器：
-
-```java
-public interface ElementHandler {
-    boolean canHandle(Element element);
-    String handle(Element element, HandlerContext context);
-}
-```
-
-### 2. 配置选项
-
-- `addCustomHandler(tag, handler)` - 添加自定义处理器
-- `preserveTag(tag)` - 保留特定标签为 HTML
-- `removeTag(tag)` - 完全移除特定标签
-
-## 设计原则
-
-1. **简洁** - 核心代码精简，易于理解和维护
-2. **可扩展** - 通过处理器模式支持自定义转换规则
-3. **健壮** - 处理各种边界情况和嵌套结构
-4. **高效** - 最小化依赖，仅使用 Jsoup 进行 HTML 解析
-
-## 依赖
-
-- Java 17+
-- Jsoup 1.17.2 (HTML 解析)
-
-## 许可证
-
-MIT License
+This project is licensed under the MIT License.
