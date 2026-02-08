@@ -12,12 +12,6 @@ import org.jsoup.select.Elements;
 public class ListHandler implements ElementHandler {
 
     @Override
-    public boolean canHandle(Element element) {
-        String tag = element.tagName().toLowerCase();
-        return tag.equals("ul") || tag.equals("ol") || tag.equals("li");
-    }
-
-    @Override
     public String handle(Element element, HandlerContext context) {
         String tag = element.tagName().toLowerCase();
 
@@ -30,6 +24,12 @@ public class ListHandler implements ElementHandler {
 
     private String handleList(Element element, HandlerContext context, boolean ordered) {
         StringBuilder result = new StringBuilder();
+
+        // Add newline before top-level lists to separate from previous content
+        if (context.getIndentLevel() == 0) {
+            result.append("\n");
+        }
+
         Elements items = element.children();
 
         int index = 1;
@@ -42,6 +42,11 @@ public class ListHandler implements ElementHandler {
                 context.increaseIndent();
                 String content = context.processElement(item).trim();
                 context.decreaseIndent();
+
+                // Skip empty list items
+                if (content.isEmpty()) {
+                    continue;
+                }
 
                 // Handle nested lists
                 if (content.contains("\n")) {
@@ -66,17 +71,40 @@ public class ListHandler implements ElementHandler {
 
     private String handleListItem(Element element, HandlerContext context) {
         StringBuilder result = new StringBuilder();
+        boolean firstElement = true;
 
         for (org.jsoup.nodes.Node node : element.childNodes()) {
             if (node instanceof org.jsoup.nodes.TextNode textNode) {
-                result.append(textNode.text());
+                String text = textNode.text().trim();
+                if (!text.isEmpty()) {
+                    if (result.length() > 0 && !result.toString().endsWith("\n")) {
+                        result.append(" ");
+                    }
+                    result.append(text);
+                    firstElement = false;
+                }
             } else if (node instanceof Element childElement) {
                 String tag = childElement.tagName().toLowerCase();
                 // Handle nested lists specially
                 if (tag.equals("ul") || tag.equals("ol")) {
                     result.append("\n").append(context.processElement(childElement));
+                } else if (tag.equals("p") || tag.equals("section")) {
+                    // For paragraphs/sections in list items, add line breaks between them
+                    String pContent = context.processElement(childElement).trim();
+                    if (!pContent.isEmpty()) {
+                        if (!firstElement && result.length() > 0) {
+                            // Add double space + newline for proper line break in Markdown list
+                            result.append("  \n");
+                        }
+                        result.append(pContent);
+                        firstElement = false;
+                    }
                 } else {
-                    result.append(context.processElement(childElement));
+                    String content = context.processElement(childElement);
+                    if (!content.trim().isEmpty()) {
+                        result.append(content);
+                        firstElement = false;
+                    }
                 }
             }
         }

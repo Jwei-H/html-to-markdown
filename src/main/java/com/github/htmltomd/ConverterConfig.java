@@ -33,6 +33,15 @@ public class ConverterConfig {
     }
 
     /**
+     * Gets all custom handlers.
+     * 
+     * @return map of all custom handlers
+     */
+    public Map<String, ElementHandler> getCustomHandlers() {
+        return new HashMap<>(customHandlers);
+    }
+
+    /**
      * Checks if a tag should be preserved as HTML.
      * 
      * @param tag the tag name

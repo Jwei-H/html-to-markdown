@@ -10,7 +10,9 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,18 +23,8 @@ public class HtmlToMarkdownConverter {
 
     // Precompiled regex patterns for performance
     private static final Pattern FENCED_CODE_BLOCK = Pattern.compile("```[\\s\\S]*?```", Pattern.MULTILINE);
-    private static final Pattern MULTIPLE_NEWLINES = Pattern.compile("\n{3,}");
-    private static final Pattern EMPTY_LIST_ITEM = Pattern.compile("^-\\s*$", Pattern.MULTILINE);
-    private static final Pattern LIST_NEWLINE_FIX = Pattern.compile("(?<=\\n[^-\\n][^\\n]*)(\\n- )");
-    private static final Pattern HEADING_NO_SPACE = Pattern.compile("([^\\s#])(#{1,6} )");
-    private static final Pattern HEADING_SINGLE_NEWLINE = Pattern.compile("([^#\\n])(\\n#{1,6} )");
-    private static final Pattern MULTIPLE_ASTERISKS = Pattern.compile("\\*{4,}");
-    private static final Pattern MULTIPLE_TILDES = Pattern.compile("~{4,}");
-    private static final Pattern ORPHANED_EMPHASIS = Pattern.compile(" +\\*\\*$", Pattern.MULTILINE);
-    private static final Pattern EMPHASIS_PAIR_BOLD = Pattern.compile("\\*\\*(.*?)\\*\\*");
-    private static final Pattern EMPHASIS_PAIR_STRIKE = Pattern.compile("~~(.*?)~~");
 
-    private final List<ElementHandler> defaultHandlers;
+    private final Map<String, ElementHandler> handlers;
     private final ConverterConfig config;
 
     public HtmlToMarkdownConverter() {
@@ -41,7 +33,7 @@ public class HtmlToMarkdownConverter {
 
     public HtmlToMarkdownConverter(ConverterConfig config) {
         this.config = config;
-        this.defaultHandlers = createDefaultHandlers();
+        this.handlers = createHandlerMap();
     }
 
     public String convert(String html) {
@@ -49,14 +41,19 @@ public class HtmlToMarkdownConverter {
             return "";
         }
 
-        // Step 1: Protect code blocks (both fenced and indented)
+        // Step 1: Protect code blocks (both fenced and indented) only if they exist
         List<String> codeBlocks = new ArrayList<>();
-        String protected_ = protectCodeBlocks(html, codeBlocks);
+        String protected_ = html;
+
+        // Quick check: only protect if code blocks might exist
+        if (html.indexOf("```") >= 0) {
+            protected_ = protectCodeBlocks(html, codeBlocks);
+        }
 
         // Step 2: Parse HTML - Jsoup wraps content in <html><body>
         Document document = Jsoup.parse(protected_);
         Element body = document.body();
-        HandlerContext context = new HandlerContext(config, defaultHandlers);
+        HandlerContext context = new HandlerContext(config, handlers);
 
         // Step 3: Process nodes - preserve TextNodes (original Markdown), convert
         // Elements
@@ -107,25 +104,44 @@ public class HtmlToMarkdownConverter {
         return result;
     }
 
-    private List<ElementHandler> createDefaultHandlers() {
-        List<ElementHandler> handlers = new ArrayList<>();
-        handlers.add(new HeadingHandler());
-        handlers.add(new ParagraphHandler());
-        handlers.add(new LinkHandler());
-        handlers.add(new ImageHandler());
-        handlers.add(new EmphasisHandler());
-        handlers.add(new CodeHandler());
-        handlers.add(new ListHandler());
-        handlers.add(new BlockquoteHandler());
-        handlers.add(new TableHandler());
-        handlers.add(new HorizontalRuleHandler());
-        handlers.add(new LineBreakHandler());
-        return handlers;
+    private Map<String, ElementHandler> createHandlerMap() {
+        Map<String, ElementHandler> handlerMap = new HashMap<>();
+
+        // Register default handlers
+        registerHandler(handlerMap, new HeadingHandler(), "h1", "h2", "h3", "h4", "h5", "h6");
+        registerHandler(handlerMap, new ParagraphHandler(), "p");
+        registerHandler(handlerMap, new LinkHandler(), "a");
+        registerHandler(handlerMap, new ImageHandler(), "img");
+        registerHandler(handlerMap, new EmphasisHandler(), "strong", "b", "em", "i", "del", "s");
+        registerHandler(handlerMap, new CodeHandler(), "code", "pre");
+        registerHandler(handlerMap, new ListHandler(), "ul", "ol", "li");
+        registerHandler(handlerMap, new BlockquoteHandler(), "blockquote");
+        registerHandler(handlerMap, new TableHandler(), "table");
+        registerHandler(handlerMap, new HorizontalRuleHandler(), "hr");
+        registerHandler(handlerMap, new LineBreakHandler(), "br");
+
+        // Merge custom handlers from config (they override defaults if tag names match)
+        for (Map.Entry<String, ElementHandler> entry : config.getCustomHandlers().entrySet()) {
+            handlerMap.put(entry.getKey(), entry.getValue());
+        }
+
+        return handlerMap;
+    }
+
+    /**
+     * Helper method to register a handler for multiple tags.
+     */
+    private void registerHandler(Map<String, ElementHandler> map, ElementHandler handler, String... tags) {
+        for (String tag : tags) {
+            map.put(tag.toLowerCase(), handler);
+        }
     }
 
     private String cleanup(String text) {
-        // Step 1: Trim whitespace from lines, preserve code blocks, and compress
-        // newlines in one pass
+        // The handlers now generate well-formatted Markdown directly, so we only need
+        // minimal cleanup: trim lines, preserve code blocks, and compress excessive
+        // newlines
+
         String[] lines = text.split("\n", -1);
         StringBuilder cleaned = new StringBuilder(text.length());
         boolean inCodeBlock = false;
@@ -158,61 +174,6 @@ public class HtmlToMarkdownConverter {
 
         String result = cleaned.toString();
 
-        // Step 2: Remove empty list items
-        result = EMPTY_LIST_ITEM.matcher(result).replaceAll("");
-
-        // Step 3: Ensure list items have newline before (when previous line is not a
-        // list item)
-        result = LIST_NEWLINE_FIX.matcher(result).replaceAll("\n$1");
-
-        // Step 4: Ensure headings have proper spacing
-        result = HEADING_NO_SPACE.matcher(result).replaceAll("$1\n$2");
-        result = HEADING_SINGLE_NEWLINE.matcher(result).replaceAll("$1\n$2");
-
-        // Step 5: Merge adjacent emphasis markers (handles both ** and ~~)
-        result = MULTIPLE_ASTERISKS.matcher(result).replaceAll("");
-        result = MULTIPLE_TILDES.matcher(result).replaceAll("");
-
-        // Step 6: Fix emphasis markers - process ** and ~~ pairs
-        result = fixEmphasisPairs(result, EMPHASIS_PAIR_BOLD, "**");
-        result = fixEmphasisPairs(result, EMPHASIS_PAIR_STRIKE, "~~");
-
-        // Step 7: Clean up remaining orphaned emphasis at line end
-        result = ORPHANED_EMPHASIS.matcher(result).replaceAll("");
-
-        // Step 8: Final newline cleanup (may be needed after list/heading fixes
-        // introduced new lines)
-        result = MULTIPLE_NEWLINES.matcher(result).replaceAll("\n\n");
-
         return result.trim() + "\n";
-    }
-
-    /**
-     * Fixes emphasis pairs by:
-     * - Trimming spaces inside the markers (e.g., "** text **" -> "**text**")
-     * - Removing empty pairs (e.g., "** **" -> "")
-     */
-    private String fixEmphasisPairs(String text, Pattern pattern, String marker) {
-        Matcher matcher = pattern.matcher(text);
-
-        StringBuffer sb = new StringBuffer();
-        while (matcher.find()) {
-            String content = matcher.group(1);
-            // Trim leading and trailing whitespace from the content
-            String trimmed = content.trim();
-
-            if (trimmed.isEmpty()) {
-                // Empty pair - remove entirely
-                matcher.appendReplacement(sb, "");
-            } else {
-                // Non-empty - replace with trimmed content
-                // Escape $ and \ for replacement
-                String replacement = marker + Matcher.quoteReplacement(trimmed) + marker;
-                matcher.appendReplacement(sb, replacement);
-            }
-        }
-        matcher.appendTail(sb);
-
-        return sb.toString();
     }
 }

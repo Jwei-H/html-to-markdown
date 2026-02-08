@@ -8,7 +8,8 @@ import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,18 +22,24 @@ class ElementHandlersTest {
 
     @BeforeEach
     void setUp() {
-        List<ElementHandler> handlers = List.of(
-                new HeadingHandler(),
-                new ParagraphHandler(),
-                new LinkHandler(),
-                new ImageHandler(),
-                new EmphasisHandler(),
-                new CodeHandler(),
-                new ListHandler(),
-                new BlockquoteHandler(),
-                new TableHandler(),
-                new HorizontalRuleHandler(),
-                new LineBreakHandler());
+        // Create handler map for testing
+        Map<String, ElementHandler> handlers = new HashMap<>();
+        handlers.put("h1", new HeadingHandler());
+        handlers.put("h2", new HeadingHandler());
+        handlers.put("h3", new HeadingHandler());
+        handlers.put("p", new ParagraphHandler());
+        handlers.put("a", new LinkHandler());
+        handlers.put("img", new ImageHandler());
+        handlers.put("strong", new EmphasisHandler());
+        handlers.put("em", new EmphasisHandler());
+        handlers.put("code", new CodeHandler());
+        handlers.put("pre", new CodeHandler());
+        handlers.put("ul", new ListHandler());
+        handlers.put("ol", new ListHandler());
+        handlers.put("blockquote", new BlockquoteHandler());
+        handlers.put("table", new TableHandler());
+        handlers.put("hr", new HorizontalRuleHandler());
+        handlers.put("br", new LineBreakHandler());
         context = new HandlerContext(ConverterConfig.defaultConfig(), handlers);
     }
 
@@ -41,11 +48,10 @@ class ElementHandlersTest {
         HeadingHandler handler = new HeadingHandler();
 
         Element h1 = Jsoup.parse("<h1>Title</h1>").body().child(0);
-        assertTrue(handler.canHandle(h1));
-        assertEquals("# Title\n\n", handler.handle(h1, context));
+        assertEquals("\n# Title\n\n", handler.handle(h1, context));
 
         Element h3 = Jsoup.parse("<h3>Subtitle</h3>").body().child(0);
-        assertEquals("### Subtitle\n\n", handler.handle(h3, context));
+        assertEquals("\n### Subtitle\n\n", handler.handle(h3, context));
     }
 
     @Test
@@ -53,7 +59,6 @@ class ElementHandlersTest {
         ParagraphHandler handler = new ParagraphHandler();
 
         Element p = Jsoup.parse("<p>Text</p>").body().child(0);
-        assertTrue(handler.canHandle(p));
         assertEquals("Text\n\n", handler.handle(p, context));
 
         Element empty = Jsoup.parse("<p></p>").body().child(0);
@@ -65,7 +70,6 @@ class ElementHandlersTest {
         LinkHandler handler = new LinkHandler();
 
         Element linkNoTitle = Jsoup.parse("<a href=\"http://example.com\">Link</a>").body().child(0);
-        assertTrue(handler.canHandle(linkNoTitle));
         assertEquals("[Link](http://example.com)", handler.handle(linkNoTitle, context));
 
         Element linkWithTitle = Jsoup.parse("<a href=\"http://example.com\" title=\"Title\">Link</a>").body().child(0);
@@ -77,7 +81,6 @@ class ElementHandlersTest {
         ImageHandler handler = new ImageHandler();
 
         Element img = Jsoup.parse("<img src=\"image.jpg\" alt=\"Alt\">").body().child(0);
-        assertTrue(handler.canHandle(img));
         assertEquals("![Alt](image.jpg)", handler.handle(img, context));
 
         Element imgWithTitle = Jsoup.parse("<img src=\"image.jpg\" alt=\"Alt\" title=\"Title\">").body().child(0);
@@ -89,7 +92,6 @@ class ElementHandlersTest {
         EmphasisHandler handler = new EmphasisHandler();
 
         Element strong = Jsoup.parse("<strong>Bold</strong>").body().child(0);
-        assertTrue(handler.canHandle(strong));
         assertEquals("**Bold**", handler.handle(strong, context));
 
         Element em = Jsoup.parse("<em>Italic</em>").body().child(0);
@@ -104,11 +106,9 @@ class ElementHandlersTest {
         CodeHandler handler = new CodeHandler();
 
         Element code = Jsoup.parse("<code>code</code>").body().child(0);
-        assertTrue(handler.canHandle(code));
         assertEquals("`code`", handler.handle(code, context));
 
         Element pre = Jsoup.parse("<pre><code>code block</code></pre>").body().child(0);
-        assertTrue(handler.canHandle(pre));
         assertEquals("```\ncode block\n```\n\n", handler.handle(pre, context));
 
         Element preWithLang = Jsoup.parse("<pre><code class=\"language-java\">code</code></pre>").body().child(0);
@@ -138,7 +138,6 @@ class ElementHandlersTest {
         BlockquoteHandler handler = new BlockquoteHandler();
 
         Element blockquote = Jsoup.parse("<blockquote>Quote</blockquote>").body().child(0);
-        assertTrue(handler.canHandle(blockquote));
         String result = handler.handle(blockquote, context);
         assertTrue(result.contains("> Quote"));
     }
@@ -148,7 +147,6 @@ class ElementHandlersTest {
         HorizontalRuleHandler handler = new HorizontalRuleHandler();
 
         Element hr = Jsoup.parse("<hr>").body().child(0);
-        assertTrue(handler.canHandle(hr));
         assertEquals("---\n\n", handler.handle(hr, context));
     }
 
@@ -157,7 +155,6 @@ class ElementHandlersTest {
         LineBreakHandler handler = new LineBreakHandler();
 
         Element br = Jsoup.parse("<br>").body().child(0);
-        assertTrue(handler.canHandle(br));
         assertEquals("  \n", handler.handle(br, context));
     }
 }

@@ -10,12 +10,6 @@ import org.jsoup.nodes.Element;
 public class HeadingHandler implements ElementHandler {
 
     @Override
-    public boolean canHandle(Element element) {
-        String tag = element.tagName().toLowerCase();
-        return tag.matches("h[1-6]");
-    }
-
-    @Override
     public String handle(Element element, HandlerContext context) {
         String tag = element.tagName().toLowerCase();
         int level = Integer.parseInt(tag.substring(1));
@@ -23,6 +17,7 @@ public class HeadingHandler implements ElementHandler {
         String prefix = "#".repeat(level);
         String text = context.processChildren(element).trim();
 
-        return prefix + " " + text + "\n\n";
+        // Ensure proper spacing: newline before, space after #, newline after
+        return "\n" + prefix + " " + text + "\n\n";
     }
 }

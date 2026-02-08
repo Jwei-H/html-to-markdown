@@ -5,7 +5,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
-import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -19,10 +19,10 @@ public class HandlerContext {
     private static final Pattern LEADING_WHITESPACE = Pattern.compile("^\\s+");
 
     private final ConverterConfig config;
-    private final List<ElementHandler> handlers;
+    private final Map<String, ElementHandler> handlers;
     private int indentLevel = 0;
 
-    public HandlerContext(ConverterConfig config, List<ElementHandler> handlers) {
+    public HandlerContext(ConverterConfig config, Map<String, ElementHandler> handlers) {
         this.config = config;
         this.handlers = handlers;
     }
@@ -113,27 +113,28 @@ public class HandlerContext {
      * @return the Markdown representation
      */
     public String processElement(Element element) {
+        String tagName = element.tagName().toLowerCase();
+
         // Check if should preserve as HTML
-        if (config.shouldPreserveTag(element.tagName())) {
+        if (config.shouldPreserveTag(tagName)) {
             return element.outerHtml();
         }
 
         // Check if should remove completely
-        if (config.shouldRemoveTag(element.tagName())) {
+        if (config.shouldRemoveTag(tagName)) {
             return "";
         }
 
-        // Try custom handler first
-        ElementHandler customHandler = config.getCustomHandler(element.tagName());
+        // Try custom handler first (from config)
+        ElementHandler customHandler = config.getCustomHandler(tagName);
         if (customHandler != null) {
             return customHandler.handle(element, this);
         }
 
-        // Try built-in handlers
-        for (ElementHandler handler : handlers) {
-            if (handler.canHandle(element)) {
-                return handler.handle(element, this);
-            }
+        // Try default handler from map (O(1) lookup)
+        ElementHandler handler = handlers.get(tagName);
+        if (handler != null) {
+            return handler.handle(element, this);
         }
 
         // Default: just process children

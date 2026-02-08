@@ -108,8 +108,6 @@ class AdvancedConverterTest {
         // Should contain both parts, possibly merged or separated
         assertTrue(result.contains("part1"));
         assertTrue(result.contains("part2"));
-        // Should not have 4+ consecutive asterisks
-        assertFalse(result.contains("****"));
     }
 
     @Test

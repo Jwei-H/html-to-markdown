@@ -11,12 +11,6 @@ import org.jsoup.nodes.Element;
 public class CodeHandler implements ElementHandler {
 
     @Override
-    public boolean canHandle(Element element) {
-        String tag = element.tagName().toLowerCase();
-        return tag.equals("code") || tag.equals("pre");
-    }
-
-    @Override
     public String handle(Element element, HandlerContext context) {
         String tag = element.tagName().toLowerCase();
 

@@ -10,11 +10,6 @@ import org.jsoup.nodes.Element;
 public class ParagraphHandler implements ElementHandler {
 
     @Override
-    public boolean canHandle(Element element) {
-        return "p".equals(element.tagName().toLowerCase());
-    }
-
-    @Override
     public String handle(Element element, HandlerContext context) {
         String text = context.processChildren(element).trim();
         if (text.isEmpty()) {

@@ -1,17 +1,20 @@
 # HTML to Markdown Converter
 
+[中文](README_zh-CN.md)
+
 [![](https://jitpack.io/v/com.jingwei/html-to-markdown.svg)](https://jitpack.io/#com.jingwei/html-to-markdown)
 
-A lightweight, extensible, and robust Java library for converting HTML content into Markdown format. Built on top of [Jsoup](https://jsoup.org/), it offers a clean API with powerful customization options.
+A lightweight, high-performance, and extensible Java library for converting HTML content into Markdown format. Built on top of [Jsoup](https://jsoup.org/), it offers a clean API with powerful customization options using modern Java features.
 
 ## Features
 
-- **Robust Conversion**: Handles standard HTML elements including tables, lists (nested), images, links, and text formatting.
-- **Code Block Protection**: Smartly handles fenced code blocks (```) and indented code blocks during conversion to prevent corruption.
-- **Clean Output**: Automatically cleans up excessive newlines, fixes list spacing, and normalizes headings and emphasis.
-- **Extensible**: Easily add custom handlers for specific HTML tags.
-- **Configurable**: Choose to preserve specific HTML tags or remove them entirely from the output.
-- **Java 17+**: Built for modern Java applications.
+- **High Performance**: Uses O(1) handler lookup for extremely fast conversion, suitable for processing large documents.
+- **Robustness**: Handles complex nested structures, lists, tables, and mixed content seamlessly.
+- **Clean Output**: Generates well-formatted Markdown directly from handlers, minimizing post-processing regex overhead.
+- **Zero-Dependency**: No external dependencies other than Jsoup.
+- **Extensible**: Easily add custom handlers using Lambda expressions.
+- **Configurable**: Flexible options to preserve specific HTML tags or remove them entirely.
+- **Java 17+**: Built for modern Java applications using functional interfaces and records.
 
 ## Installation
 
@@ -40,6 +43,21 @@ This project is hosted on [JitPack](https://jitpack.io).
 </dependency>
 ```
 
+### Gradle
+
+```groovy
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+dependencies {
+    implementation 'com.github.jingwei:html-to-markdown:1.0-SNAPSHOT'
+}
+```
+
 ## Usage
 
 ### Basic Usage
@@ -51,6 +69,7 @@ import com.github.htmltomd.HtmlToMarkdownConverter;
 
 public class Example {
     public static void main(String[] args) {
+        // Create a converter with default settings
         HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter();
         
         String html = "<h1>Hello World</h1><p>This is a <strong>bold</strong> statement.</p>";
@@ -98,68 +117,68 @@ public class ConfigExample {
 E = mc<sup>2</sup>
 ```
 
-### Custom Element Handlers
+### Custom Element Handlers (Lambda Support)
 
-You can define your own transformation logic for specific tags by implementing `ElementHandler`:
+You can define your own transformation logic for specific tags using simple Lambda expressions. This is much more concise than the traditional interface implementation.
 
 ```java
 import com.github.htmltomd.HtmlToMarkdownConverter;
 import com.github.htmltomd.ConverterConfig;
-import com.github.htmltomd.handler.ElementHandler;
-import com.github.htmltomd.handler.HandlerContext;
-import org.jsoup.nodes.Element;
 
 public class CustomHandlerExample {
     public static void main(String[] args) {
-        ElementHandler markHandler = new ElementHandler() {
-            @Override
-            public boolean canHandle(Element element) {
-                return "mark".equals(element.tagName());
-            }
-
-            @Override
-            public String handle(Element element, HandlerContext context) {
-                // Determine how to handle children
+        // Use a lambda expression to handle <mark> tags
+        ConverterConfig config = ConverterConfig.builder()
+            .addCustomHandler("mark", (element, context) -> {
                 String content = context.processChildren(element);
                 return "==" + content + "=="; // Custom markdown syntax for highlighting
-            }
-        };
-
-        ConverterConfig config = ConverterConfig.builder()
-            .addCustomHandler("mark", markHandler)
+            })
+            // You can also override default handlers, e.g., make <h1> uppercase
+            .addCustomHandler("h1", (element, context) -> {
+                String content = context.processChildren(element).toUpperCase();
+                return "\n# " + content + "\n\n";
+            })
             .build();
 
         HtmlToMarkdownConverter converter = new HtmlToMarkdownConverter(config);
-        System.out.println(converter.convert("Text with <mark>highlight</mark>"));
+        System.out.println(converter.convert("<h1>Title</h1>Text with <mark>highlight</mark>"));
     }
 }
+```
+
+**Output:**
+```markdown
+# TITLE
+
+Text with ==highlight==
 ```
 
 ## Supported Elements
 
 The default converter supports standard Markdown syntax mappings:
 
-| HTML Element | Markdown Equivalent |
-|--------------|---------------------|
-| `<h1>`-`<h6>` | `#` - `######` |
-| `<p>` | Paragraph (double newline) |
-| `<br>` | Line break |
-| `<strong>`, `<b>` | `**Bold**` |
-| `<em>`, `<i>` | `*Italic*` |
-| `<ul>`, `<ol>`, `<li>` | Lists (Ordered & Unordered), Supports nesting |
-| `<a>` | `[Link Title](URL)` |
-| `<img>` | `![Alt Text](URL "Title")` |
-| `<blockquote>` | `> Quote` |
-| `<pre>`, `<code>` | Code blocks and inline code |
-| `<table>`, `<tr>`, `<td>`, etc. | Markdown Tables |
-| `<hr>` | `---` |
+| HTML Element           | Markdown Equivalent | Notes                                      |
+| ---------------------- | ------------------- | ------------------------------------------ |
+| `<h1>`-`<h6>`          | `#` - `######`      | Ensures proper spacing                     |
+| `<p>`                  | Paragraph           | Splits with double newline                 |
+| `<br>`                 | Line break          | Two spaces + newline                       |
+| `<strong>`, `<b>`      | `**Bold**`          | Automatically trims, deduplicates nesting  |
+| `<em>`, `<i>`          | `*Italic*`          |                                            |
+| `<s>`, `<del>`         | `~~Strikethrough~~` |                                            |
+| `<ul>`, `<ol>`, `<li>` | Lists               | Supports unlimited nesting and mixed types |
+| `<a>`                  | `[Title](URL)`      |                                            |
+| `<img>`                | `![Alt](URL)`       |                                            |
+| `<blockquote>`         | `> Quote`           |                                            |
+| `<pre>`, `<code>`      | Code blocks         | Supports language detection                |
+| `<table>`              | Markdown Tables     |                                            |
+| `<hr>`                 | `---`               |                                            |
 
 ## Building from Source
 
 To build the project locally, you need JDK 17+ and Maven.
 
 ```bash
-git clone https://github.com/yourusername/html-to-markdown.git
+git clone https://github.com/jingwei/html-to-markdown.git
 cd html-to-markdown
 mvn clean install
 ```
