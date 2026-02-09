@@ -119,6 +119,7 @@ public class HtmlToMarkdownConverter {
         registerHandler(handlerMap, new TableHandler(), "table");
         registerHandler(handlerMap, new HorizontalRuleHandler(), "hr");
         registerHandler(handlerMap, new LineBreakHandler(), "br");
+        registerHandler(handlerMap, new SpanHandler(), "span");
 
         // Merge custom handlers from config (they override defaults if tag names match)
         for (Map.Entry<String, ElementHandler> entry : config.getCustomHandlers().entrySet()) {
