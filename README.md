@@ -39,7 +39,7 @@ This project is hosted on [JitPack](https://jitpack.io).
 <dependency>
     <groupId>com.github.jingwei</groupId>
     <artifactId>html-to-markdown</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>v1.0-beta.2</version>
 </dependency>
 ```
 
@@ -54,7 +54,7 @@ allprojects {
 }
 
 dependencies {
-    implementation 'com.github.jingwei:html-to-markdown:1.0-SNAPSHOT'
+    implementation 'com.github.jingwei:html-to-markdown:v1.0-beta.2'
 }
 ```
 
