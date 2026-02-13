@@ -55,6 +55,29 @@ class ElementHandlersTest {
     }
 
     @Test
+    void testHeadingHandlerOptimizations() {
+        HeadingHandler handler = new HeadingHandler();
+
+        // Empty heading
+        Element empty = Jsoup.parse("<h1></h1>").body().child(0);
+        assertEquals("", handler.handle(empty, context));
+
+        // Whitespace only
+        Element whitespace = Jsoup.parse("<h2>   </h2>").body().child(0);
+        assertEquals("", handler.handle(whitespace, context));
+
+        // Image only
+        Element imageOnly = Jsoup.parse("<h1><img src='img.png' alt='alt'></h1>").body().child(0);
+        assertEquals("![alt](img.png)\n\n", handler.handle(imageOnly, context));
+
+        // Image with text
+        Element imageText = Jsoup.parse("<h1>Text <img src='img.png' alt='alt'></h1>").body().child(0);
+        String result = handler.handle(imageText, context);
+        assertTrue(result.startsWith("\n# Text"));
+        assertTrue(result.contains("![alt](img.png)"));
+    }
+
+    @Test
     void testParagraphHandler() {
         ParagraphHandler handler = new ParagraphHandler();
 

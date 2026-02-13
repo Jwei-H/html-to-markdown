@@ -8,13 +8,13 @@
 
 ## 特性 (Features)
 
-- **高性能**: 无需预编译正则，使用 O(1) 的处理器查找，适合高并发或大文档的处理。
+- **高性能**: 适合高并发或大文档的处理。
 - **健壮性**: 完美处理复杂的嵌套结构、列表、表格和混合内容，避免格式混乱。
 - **输出整洁**: 处理器直接生成格式良好的 Markdown，极大减少了后期正则清理的开销。
 - **零依赖**: 除了 Jsoup 之外没有任何第三方依赖。
 - **可扩展**: 支持使用 Lambda 表达式轻松添加自定义处理器。
 - **可配置**: 灵活的配置选项，可以选择保留特定的 HTML 标签或完全移除它们。
-- **Java 17+**: 专为现代 Java 应用构建，利用函数式接口和 records 特性。
+- **Java 17+**: 专为现代 Java 应用构建。
 
 ## 安装 (Installation)
 
@@ -39,7 +39,7 @@
 <dependency>
     <groupId>com.github.jingwei</groupId>
     <artifactId>html-to-markdown</artifactId>
-    <version>v1.0-beta.2</version>
+    <version>v1.0-beta.4</version>
 </dependency>
 ```
 

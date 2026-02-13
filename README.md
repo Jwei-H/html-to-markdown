@@ -8,13 +8,13 @@ A lightweight, high-performance, and extensible Java library for converting HTML
 
 ## Features
 
-- **High Performance**: Uses O(1) handler lookup for extremely fast conversion, suitable for processing large documents.
+- **High Performance**: suitable for processing large documents.
 - **Robustness**: Handles complex nested structures, lists, tables, and mixed content seamlessly.
 - **Clean Output**: Generates well-formatted Markdown directly from handlers, minimizing post-processing regex overhead.
 - **Zero-Dependency**: No external dependencies other than Jsoup.
 - **Extensible**: Easily add custom handlers using Lambda expressions.
 - **Configurable**: Flexible options to preserve specific HTML tags or remove them entirely.
-- **Java 17+**: Built for modern Java applications using functional interfaces and records.
+- **Java 17+**: Built for modern Java applications.
 
 ## Installation
 
@@ -39,7 +39,7 @@ This project is hosted on [JitPack](https://jitpack.io).
 <dependency>
     <groupId>com.github.jingwei</groupId>
     <artifactId>html-to-markdown</artifactId>
-    <version>v1.0-beta.2</version>
+    <version>v1.0-beta.4</version>
 </dependency>
 ```
 
