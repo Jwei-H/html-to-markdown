@@ -13,15 +13,17 @@ public class SpanHandler implements ElementHandler {
 
     @Override
     public String handle(Element element, HandlerContext context) {
+        // If no style attribute, just process children without trimming
+        // This is crucial to preserve newlines if the span contains block elements
+        String style = element.attr("style");
+        if (style == null || style.isEmpty()) {
+            return context.processChildren(element);
+        }
+
         String text = context.processChildren(element).trim();
 
         // If empty content, return empty
-        if (text.trim().isEmpty()) {
-            return text;
-        }
-
-        String style = element.attr("style");
-        if (style == null || style.isEmpty()) {
+        if (text.isEmpty()) {
             return text;
         }
 
