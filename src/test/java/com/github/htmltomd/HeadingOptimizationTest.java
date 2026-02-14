@@ -42,21 +42,20 @@ class HeadingOptimizationTest {
         // Case 1: H + H
         String html = "<h1>Title A</h1><h1>Title B</h1>";
         String result = converter.convert(html).trim();
-        // Expect: # Title A <br> Title B
-        // Note: my code inserts " <br> "
-        assertTrue(result.contains("# Title A <br> Title B"), "Result was: " + result);
+        // Expect: # Title A Title B
+        assertTrue(result.contains("# Title A Title B"), "Result was: " + result);
 
         // Case 2: H + BR + H
         html = "<h2>Title A</h2><br><h2>Title B</h2>";
         result = converter.convert(html).trim();
-        assertTrue(result.contains("## Title A <br> Title B"), "Result was: " + result);
+        assertTrue(result.contains("## Title A Title B"), "Result was: " + result);
     }
 
     @Test
     void testMergeConsecutiveHeadingsWithWhitespace() {
         String html = "<h3>A</h3>   <h3>B</h3>";
         String result = converter.convert(html).trim();
-        assertTrue(result.contains("### A <br> B"), "Result was: " + result);
+        assertTrue(result.contains("### A B"), "Result was: " + result);
     }
 
     @Test
@@ -65,6 +64,7 @@ class HeadingOptimizationTest {
         String result = converter.convert(html).trim();
         assertTrue(result.contains("# A"));
         assertTrue(result.contains("## B"));
+        assertFalse(result.contains("# A B"), "Different levels should not be merged");
     }
 
     @Test

@@ -53,7 +53,6 @@ public class HtmlToMarkdownConverter {
         // Step 2: Parse HTML - Jsoup wraps content in <html><body>
         Document document = Jsoup.parse(protected_);
         Element body = document.body();
-        preprocess(body);
         HandlerContext context = new HandlerContext(config, handlers);
 
         // Step 3: Process nodes - preserve TextNodes (original Markdown), convert
@@ -73,7 +72,7 @@ public class HtmlToMarkdownConverter {
         // Step 4: Restore code blocks
         String output = restoreCodeBlocks(result.toString(), codeBlocks);
 
-        return cleanup(output);
+        return mergeConsecutiveHeadings(cleanup(output));
     }
 
     /**
@@ -140,83 +139,31 @@ public class HtmlToMarkdownConverter {
     }
 
     /**
-     * Preprocesses the DOM to merge consecutive headings of the same level.
-     * Merges:
-     * 1.
-     * <h1>A</h1>
-     * <h1>B</h1> ->
-     * <h1>A <br>
-     * B</h1>
-     * 2.
-     * <h1>A</h1><br>
-     * <h1>B</h1> ->
-     * <h1>A <br>
-     * B</h1>
+     * Merges consecutive headings of the same level using regex.
+     * Example:
+     * # Heading A
+     * # Heading B
+     * Becomes:
+     * # Heading A <br>
+     * Heading B
      */
-    private void preprocess(Element body) {
-        for (int i = 0; i < body.childrenSize();) {
-            Element current = body.child(i);
+    private String mergeConsecutiveHeadings(String markdown) {
+        // Pattern to match two consecutive headings of the same level
+        // Group 1: The # characters (level)
+        // Group 2: The text of the first heading
+        // Group 3: The text of the second heading
+        // Use a loop to handle chained merges (A + B + C -> A <br> B <br> C)
 
-            if (!isHeading(current)) {
-                i++;
-                continue;
-            }
+        Pattern p = Pattern.compile("(?m)^(#+)[ \\t]+(.*?)\\s*\\n+\\s*\\1[ \\t]+(.*?)$");
+        String previous = null;
+        String current = markdown;
 
-            boolean merged = false;
-            Element next = current.nextElementSibling();
-
-            if (next != null) {
-                // Case 1: Adjacent same-tag headings
-                if (next.tagName().equals(current.tagName())) {
-                    if (!hasSignificantTextBetween(current, next)) {
-                        mergeHeadings(current, next);
-                        next.remove();
-                        merged = true;
-                    }
-                }
-                // Case 2: Heading + BR + Same-tag Heading
-                else if (next.tagName().equalsIgnoreCase("br")) {
-                    Element nextNext = next.nextElementSibling();
-                    if (nextNext != null && nextNext.tagName().equals(current.tagName())) {
-                        if (!hasSignificantTextBetween(current, next) && !hasSignificantTextBetween(next, nextNext)) {
-                            mergeHeadings(current, nextNext);
-                            next.remove();
-                            nextNext.remove();
-                            merged = true;
-                        }
-                    }
-                }
-            }
-
-            if (!merged) {
-                i++;
-            }
+        while (!current.equals(previous)) {
+            previous = current;
+            current = p.matcher(current).replaceAll("$1 $2 $3");
         }
-    }
 
-    private boolean isHeading(Element e) {
-        String name = e.tagName().toLowerCase();
-        return name.length() == 2 && name.charAt(0) == 'h' && Character.isDigit(name.charAt(1));
-    }
-
-    private void mergeHeadings(Element target, Element source) {
-        target.appendChild(new TextNode(" <br> "));
-        while (source.childNodeSize() > 0) {
-            target.appendChild(source.childNode(0));
-        }
-    }
-
-    private boolean hasSignificantTextBetween(Element e1, Element e2) {
-        Node sibling = e1.nextSibling();
-        while (sibling != null && sibling != e2) {
-            if (sibling instanceof TextNode textNode) {
-                if (!textNode.isBlank()) {
-                    return true;
-                }
-            }
-            sibling = sibling.nextSibling();
-        }
-        return false;
+        return current;
     }
 
     private String cleanup(String text) {
